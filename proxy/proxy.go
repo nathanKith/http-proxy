@@ -6,9 +6,27 @@ import (
 	"net/http"
 )
 
+func copyHeader(to, from http.Header) {
+	for header, values := range from {
+		for _, value := range values {
+			to.Add(header, value)
+		}
+	}
+}
+
 type Proxy struct {}
 
 func (p *Proxy) ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) {
+	if request.Method == "CONNECT" {
+		handleHTTPS(responseWriter, request)
+
+		return
+	}
+
+	handleHTTP(responseWriter, request)
+}
+
+func handleHTTP(responseWriter http.ResponseWriter, request *http.Request) {
 	request.RequestURI = ""
 	request.Header.Del("Proxy-Connection")
 
@@ -29,10 +47,6 @@ func (p *Proxy) ServeHTTP(responseWriter http.ResponseWriter, request *http.Requ
 	io.Copy(responseWriter, proxyResponse.Body)
 }
 
-func copyHeader(to, from http.Header) {
-	for header, values := range from {
-		for _, value := range values {
-			to.Add(header, value)
-		}
-	}
+func handleHTTPS(responseWriter http.ResponseWriter, request *http.Request) {
+	responseWriter.WriteHeader(http.StatusOK)
 }
